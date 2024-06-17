@@ -80,11 +80,12 @@ module.exports = () => {
     },
     headers: async () => [
       {
-        source: '/:path*',
+        // source: '/:path*',
+        source: "/(.*)",
         headers: [
           {
             key: 'Content-Security-Policy',
-            value: "style-src 'self' 'unsafe-inline' https://;", // https:// 추가
+            value: "style-src 'self' 'unsafe-inline' https://;",
           },
         ],
       },
