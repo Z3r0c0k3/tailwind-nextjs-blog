@@ -66,8 +66,7 @@ module.exports = () => {
     eslint: {
       dirs: ["app", "components", "layouts", "scripts"],
       },
-    // output: 'export',
-    // basePath: "/tailwind-nextjs-blog",
+    output: 'export',
     images: {
       remotePatterns: [
         {
@@ -85,7 +84,7 @@ module.exports = () => {
         headers: [
           {
             key: 'Content-Security-Policy',
-            value: "style-src 'self' 'unsafe-inline' https://;",
+            value: "style-src 'self' 'unsafe-inline'"
           },
         ],
       },
