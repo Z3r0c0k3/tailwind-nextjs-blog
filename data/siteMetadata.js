@@ -1,13 +1,13 @@
 /** @type {import("pliny/config").PlinyConfig } */
 const siteMetadata = {
-  title: 'GeckoBaem"s Blog',
+  title: "GeckoBaem's Blog",
   author: "GeckoBaem",
   headerTitle: "GeckoBaem",
   description: "최근 블로그 목록",
   language: "ko-KR",
   theme: "system", // system, dark or light
   siteUrl: "https://tailwind-nextjs-starter-blog.vercel.app",
-  siteRepo: "https://github.com/timlrx/tailwind-nextjs-starter-blog",
+  siteRepo: "https://github.com/GeckoBaem/tailwind-nextjs-blog",
   siteLogo: "/static/images/logo.png",
   socialBanner: "/static/images/twitter-card.png",
   // mastodon: "https://mastodon.social/@mastodonuser",

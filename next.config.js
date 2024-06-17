@@ -61,20 +61,12 @@ module.exports = () => {
   const plugins = [withContentlayer, withBundleAnalyzer]
   return plugins.reduce((acc, next) => next(acc), {
     reactStrictMode: true,
-    output: 'export',
     trailingSlash: true,
-    generateStaticParams: async function (
-      defaultPathMap,
-      { dev, dir, outDir, distDir, buildId }
-    ) {
-      return {
-        '/': { page: '/' }
-      }
-    },
     pageExtensions: ["ts", "tsx", "js", "jsx", "md", "mdx"],
     eslint: {
       dirs: ["app", "components", "layouts", "scripts"],
-    },
+      },
+    // output: 'export',
     // basePath: "/tailwind-nextjs-blog",
     images: {
       remotePatterns: [
@@ -86,14 +78,17 @@ module.exports = () => {
         },
       ],
     },
-    async headers() {
-      return [
-        {
-          source: "/(.*)",
-          headers: securityHeaders,
-        },
-      ]
-    },
+    headers: async () => [
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'Content-Security-Policy',
+            value: "style-src 'self' 'unsafe-inline' https://;", // https:// 추가
+          },
+        ],
+      },
+    ],
     webpack: (config, options) => {
       config.module.rules.push({
         test: /\.svg$/,

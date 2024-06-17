@@ -30,12 +30,12 @@ const projectsData: Project[] = [
     imgSrc: "https://i.imgur.com/ZpGq1Gk.png",
     href: "https://project-ulla-web.pages.dev/",
   },
-  {
-    title: "MAKE AMS PWA",
-    description: `메이커스페이스 출입관리 시스템 PWA (디자인)`,
-    imgSrc: "",
-    href: "https://github.com/suk-6/MAKE-AMS-pwa",
-  },
+  // {
+  //   title: "MAKE AMS PWA",
+  //   description: `메이커스페이스 출입관리 시스템 PWA (디자인)`,
+  //   imgSrc: "",
+  //   href: "https://github.com/suk-6/MAKE-AMS-pwa",
+  // },
 ]
 
 export default projectsData
