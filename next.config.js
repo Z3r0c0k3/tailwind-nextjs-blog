@@ -79,7 +79,6 @@ module.exports = () => {
     },
     headers: async () => [
       {
-        // source: '/:path*',
         source: "/(.*)",
         headers: [
           {

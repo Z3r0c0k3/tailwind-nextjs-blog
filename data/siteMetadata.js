@@ -6,7 +6,7 @@ const siteMetadata = {
   description: "최근 블로그 목록",
   language: "ko-KR",
   theme: "system", // system, dark or light
-  siteUrl: "https://tailwind-nextjs-starter-blog.vercel.app",
+  siteUrl: "https://page.geckobaem.kr/",
   siteRepo: "https://github.com/GeckoBaem/tailwind-nextjs-blog",
   siteLogo: "/static/images/logo.png",
   socialBanner: "/static/images/twitter-card.png",
