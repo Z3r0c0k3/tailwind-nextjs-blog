@@ -67,7 +67,7 @@ module.exports = () => {
       dirs: ["app", "components", "layouts", "scripts"],
       },
     output: 'export',
-    assetPrefix: '/out',
+    // assetPrefix: '/out',
     images: {
       remotePatterns: [
         {
