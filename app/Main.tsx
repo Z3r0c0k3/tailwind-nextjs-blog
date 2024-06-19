@@ -6,7 +6,6 @@ import NewsletterForm from "pliny/ui/NewsletterForm"
 import GitHubCalendar from "react-github-calendar"
 import SocialIcon from "@/components/social-icons"
 
-
 const MAX_DISPLAY = 5
 
 const today = new Date()
