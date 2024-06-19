@@ -67,8 +67,8 @@ module.exports = () => {
       dirs: ["app", "components", "layouts", "scripts"],
       },
     output: 'export',
-    // assetPrefix: '/out',
     images: {
+      unoptimized: true,
       remotePatterns: [
         {
           protocol: "https",
@@ -96,6 +96,6 @@ module.exports = () => {
       })
 
       return config
-    },
+    }, 
   })
 }
