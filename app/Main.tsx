@@ -13,14 +13,13 @@ export default function Home({ posts }) {
   return (
     <>
       <div className="mb-10 mt-20">
-        <h1 className="sm:leading-16 animate-gradient bg-[linear-gradient(to_right,theme(colors.green.300),#007BA7,theme(colors.blue.500),theme(colors.purple.300),#FF7F50,theme(colors.green.300))] bg-[length:150%_auto] bg-clip-text text-5xl font-bold leading-14 text-transparent sm:text-8xl ">
+        <h1 className="sm:leading-16 animate-gradient bg-[linear-gradient(to_right,theme(colors.purple.300),#007BA7,theme(colors.green.500),theme(colors.green.300),#FF7F50,theme(colors.blue.300))] bg-[length:150%_auto] bg-clip-text text-4xl font-bold leading-14 text-transparent sm:text-7xl ">
           flag&#123;H3110_W0r1d!&#125;
         </h1>
       </div>
-      <p className="text-xl">Yeowoong Park / Z3r0c0k3 Park</p>
-      <p className="text-xl">Security Researcher / Software Developer</p>
+      <p className="text-1xl sm:text-3xl font-bold">박여웅 | Yeowoong Park</p>
+      <p className="text-1xl sm:text-2xl">Security Researcher | Software Developer</p>
       <div className="mt-4 flex space-x-5">
-        {/* <SocialIcon kind="homepage" href={siteMetadata.homepage} size={10} /> */}
         <SocialIcon kind="mail" href={`mailto:${siteMetadata.email}`} size={10} />
         <SocialIcon kind="github" href={siteMetadata.github} size={10} />
         <SocialIcon kind="instagram" href={siteMetadata.instagram} size={10} />
@@ -37,7 +36,7 @@ export default function Home({ posts }) {
       </div>
       <div className="divide-y divide-gray-200 dark:divide-neutral-600">
         <div className="space-y-2 pb-8 pt-6 md:space-y-5">
-          <h1 className="text-3xl font-extrabold leading-9 tracking-tight text-gray-900 dark:text-gray-100 sm:text-4xl sm:leading-10 md:text-6xl md:leading-14">
+          <h1 className="text-3xl font-extrabold leading-9 tracking-tight text-gray-900 dark:text-gray-100 sm:text-4xl sm:leading-10 md:text-5xl md:leading-14">
             Latest
           </h1>
           <p className="text-lg leading-7 text-gray-500 dark:text-gray-400">

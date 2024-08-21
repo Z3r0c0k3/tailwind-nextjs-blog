@@ -13,13 +13,10 @@ export default function Footer() {
           <SocialIcon kind="x" href={siteMetadata.x} size={6} />
         </div>
         <div className="mb-2 flex space-x-2 text-sm text-gray-500 dark:text-gray-400">
-          <div>{siteMetadata.author}</div>
-          <div>{` • `}</div>
           <div>{`© ${new Date().getFullYear()}. Yeowoong Park all rights reserved.`}</div>
-          <div>{` • `}</div>
-          <Link href="/">{siteMetadata.title}</Link>
         </div>
-        <Link href="https://github.com/GeckoBaem/tailwind-nextjs-blog" className='mb-2 flex space-x-2 text-sm text-gray-500 dark:text-gray-400'>{siteMetadata.forkedRepo}</Link>
+        <Link href="https://github.com/GeckoBaem/tailwind-nextjs-blog" className='flex space-x-2 text-sm text-gray-500 dark:text-gray-400'>{siteMetadata.forkedRepoKr}</Link>
+        <Link href="https://github.com/GeckoBaem/tailwind-nextjs-blog" className='mb-2 flex space-x-2 text-sm text-gray-500 dark:text-gray-400'>{siteMetadata.forkedRepoEn}</Link>
         <div className="mb-8 text-sm text-gray-500 dark:text-gray-400">
         </div>
       </div>

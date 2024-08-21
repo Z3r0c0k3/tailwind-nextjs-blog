@@ -13,7 +13,7 @@ export default function Projects() {
             Projects
           </h1>
           <p className="text-lg leading-7 text-gray-500 dark:text-gray-400">
-            제작하거나 참여한 프로젝트
+            제작 및 참여한 프로젝트들을 소개할게요. 더보기를 눌러 Repo을 확인해보세요.
           </p>
         </div>
         <div className="container py-12">

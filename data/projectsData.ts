@@ -7,28 +7,37 @@ interface Project {
 //이미지 프레임 사이즈 16 X 9
 const projectsData: Project[] = [
   {
-    title: "WITTY",
-    description: `2024년도 제50회 덕영제 전시 목적 MAKE@Web 동아리 - 교사 정보 제공 웹앱`,
-    imgSrc: "https://i.imgur.com/fEJWjIy.png",
-    href: "https://witty.dyhs.kr/",
+    title: "D-DAY 수능",
+    description: `2024학년도 웹프실 프로젝트 - 수능|모의고사 D-DAY 사이트`,
+    imgSrc: "https://i.imgur.com/ZgrCbPH.png",
+    href: "https://github.com/images/Z3r0c0k3/d-day-suneung",
   },
   {
-    title: "Gradient Color Text Generator",
-    description: `React 학습 목적 그라데이션 텍스트 생성기`,
-    imgSrc: "",
-    href: "https://github.com/GeckoBaem/Gradient-color-Text",
+    title: "pwnable docker server",
+    description: `CG2023 - pwnable 문제를 풀 때 필요한 도구가 설치된 서버 docker 이미지`,
+    imgSrc: "https://i.imgur.com/iBRUfhc.png",
+    href: "https://github.com/Z3r0c0k3/2023-cg-pwn",
   },
   {
-    title: "Quick Sort Animation",
-    description: `자료구조 - 퀵정렬 시각화 제작`,
-    imgSrc: "https://i.imgur.com/69Y8MwT.png",
-    href: "https://github.com/GeckoBaem/Quick-Sort-Animation-",
+    title: "K-mean algorithm DEMO",
+    description: `2024학년도 알고리즘 발표회 출품작 - K-means clustering DEMO`,
+    imgSrc: "https://i.imgur.com/Ah83CY0.png",
+    href: "https://github.com/Z3r0c0k3/algorithm-pt",
   },
   {
-    title: "PROJECT: ULLA",
-    description: `2023년도 비즈쿨 솔루션 - 코오롱 글로텍 문제 해결 발표 보조자료 아이디어 소개 사이트`,
-    imgSrc: "https://i.imgur.com/ZpGq1Gk.png",
-    href: "https://project-ulla-web.pages.dev/",
+    title: "E2EE Chat",
+    description: `2024학년도 제 50회 덕영제 출품작 - 종단 간 암호화 지원 채팅 서비스`,
+    href: "https://github.com/Z3r0c0k3/E2EE-chat",
+  },
+  {
+    title: "pns-coin-toss",
+    description: `확통 교과 연계 프로젝트 - 확률론을 이용한 동전 던지기 시뮬레이터`,
+    href: "https://github.com/Z3r0c0k3/pns-coin_toss.git",
+  },
+  {
+    title: "Minecraft Automation",
+    description: `개인 프로젝트 - 마인크래프트 서버 백업 자동화 소프트웨어`,
+    href: "https://github.com/Z3r0c0k3/algorithm-pthttps://github.com/Z3r0c0k3/mc_automation",
   },
 ]
 

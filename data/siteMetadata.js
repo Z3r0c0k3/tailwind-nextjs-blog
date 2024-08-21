@@ -1,14 +1,15 @@
 /** @type {import("pliny/config").PlinyConfig } */
 const siteMetadata = {
-  title: "Z3r0c0k3's Blog",
+  title: "zerocoke.log",
   author: "Z3r0c0k3",
   headerTitle: "0_c0k3.log",
-  description: "최근 블로그 목록",
+  description: "최근에 작성한 블로그에요. 한번 읽어보세요.",
   language: "ko-KR",
   theme: "system", // system, dark or light
   siteUrl: "https://blog.zerocoke.kr",
   siteRepo: "https://github.com/Z3r0c0k3/tailwind-nextjs-blog",
-  forkedRepo: "uses a template from tailwind-nextjs-starter-blog customized by GeckoBaem",
+  forkedRepoKr: "GeckoBeam의 커스텀 템플릿 바탕으로 제작되었습니다.",
+  forkedRepoEn: "Built from GeckoBeam's custom template.",
   siteLogo: "/static/images/logo.png",
   socialBanner: "/static/images/twitter-card.png",
   // mastodon: "https://mastodon.social/@mastodonuser",
