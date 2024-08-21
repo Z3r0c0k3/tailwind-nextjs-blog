@@ -13,7 +13,7 @@ export default function Home({ posts }) {
   return (
     <>
       <div className="mb-10 mt-20">
-        <h1 className="sm:leading-16 animate-gradient bg-[linear-gradient(to_right,theme(colors.green.300),#007BA7,theme(colors.blue.500),theme(colors.purple.300),#FF7F50,theme(colors.green.300))] bg-[length:150%_auto] bg-clip-text text-10xl font-bold leading-14 text-transparent sm:text-7xl ">
+        <h1 className="sm:leading-16 animate-gradient bg-[linear-gradient(to_right,theme(colors.green.300),#007BA7,theme(colors.blue.500),theme(colors.purple.300),#FF7F50,theme(colors.green.300))] bg-[length:150%_auto] bg-clip-text text-5xl font-bold leading-14 text-transparent sm:text-8xl ">
           flag&#123;H3110_W0r1d!&#125;
         </h1>
       </div>
@@ -32,10 +32,6 @@ export default function Home({ posts }) {
           <GitHubCalendar
             username="z3r0c0k3"
             year={today.getFullYear()}
-            showWeekdayLabels
-            theme={{
-              dark: ["#161b22", "#0e4429", "#006d32", "#26a641", "#39d353"],
-            }}
           />
         </div>
       </div>
