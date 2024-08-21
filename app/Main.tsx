@@ -2,7 +2,6 @@ import Link from "@/components/Link"
 import Tag from "@/components/Tag"
 import siteMetadata from "@/data/siteMetadata"
 import { formatDate } from "pliny/utils/formatDate"
-import NewsletterForm from "pliny/ui/NewsletterForm"
 import GitHubCalendar from "react-github-calendar"
 import SocialIcon from "@/components/social-icons"
 
@@ -14,25 +13,28 @@ export default function Home({ posts }) {
   return (
     <>
       <div className="mb-10 mt-20">
-        <h1 className="sm:leading-16 animate-gradient bg-[linear-gradient(to_right,theme(colors.green.300),#007BA7,theme(colors.blue.500),theme(colors.purple.300),#FF7F50,theme(colors.green.300))] bg-[length:150%_auto] bg-clip-text text-6xl font-bold leading-14 text-transparent sm:text-8xl ">
-          Hello World!
+        <h1 className="sm:leading-16 animate-gradient bg-[linear-gradient(to_right,theme(colors.green.300),#007BA7,theme(colors.blue.500),theme(colors.purple.300),#FF7F50,theme(colors.green.300))] bg-[length:150%_auto] bg-clip-text text-10xl font-bold leading-14 text-transparent sm:text-7xl ">
+          flag&#123;H3110_W0r1d!&#125;
         </h1>
       </div>
-      <p className="text-xl">WOOJIN JEON / DYHS Software Department</p>
-      <p className="text-xl">전우진 / 덕영고 소프트웨어과</p>
+      <p className="text-xl">Yeowoong Park / Z3r0c0k3 Park</p>
+      <p className="text-xl">Security Researcher / Software Developer</p>
       <div className="mt-4 flex space-x-5">
+        {/* <SocialIcon kind="homepage" href={siteMetadata.homepage} size={10} /> */}
         <SocialIcon kind="mail" href={`mailto:${siteMetadata.email}`} size={10} />
         <SocialIcon kind="github" href={siteMetadata.github} size={10} />
         <SocialIcon kind="instagram" href={siteMetadata.instagram} size={10} />
+        <SocialIcon kind="x" href={siteMetadata.x} size={10} />
       </div>
       <div className="my-5 mt-24 flex w-full items-center justify-center rounded-lg border-2 border-solid border-gray-100 dark:border-neutral-600">
-        <div className="mx-10 my-7 overflow-x-auto">
+        <div className="mx-7 my-5 overflow-x-auto">
+        <p className="mb-5 text-xl">Github Contributions</p>
           <GitHubCalendar
-            username="geckobaem"
+            username="z3r0c0k3"
             year={today.getFullYear()}
             showWeekdayLabels
             theme={{
-              dark: ["#1d232b", "#2c456b", "#3c649f", "#4779c4", "#83aff0"],
+              dark: ["#161b22", "#0e4429", "#006d32", "#26a641", "#39d353"],
             }}
           />
         </div>
