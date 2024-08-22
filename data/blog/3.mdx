@@ -1,0 +1,239 @@
+---
+title: "[Dreamhack] 시스템 해킹 로드맵 부수기 - 2"
+date: "2024-07-13"
+tags: ["dreamhack", "system_hacking", "roadmap"]
+draft: false
+summary: "요약: x64는 어렵다."
+---
+
+> 오늘은 Stack Buffer Overflow 만 하다 갈거임. 그렇게 아십셔.
+> 일단 호출 규약부터 시작!
+# BG - Calling Covention
+
+## 종류
+
+### x86
+
+- cdecl -> linux 
+- stdcall
+- fastcall -> 윈도 x86
+- thiscall
+
+### x86-64
+
+- SYSTEM V AMD64 ABI Calling Convention -> 고냥 바로 fastcall (Linux)
+	- 줄여서, SYSV 라고 함.
+- MS ABI Calling Convention -> 윈도 x64에서 사용하는 Calling Convention
+- 지금부터 할건 리눅스 기반 Calling Convention임.
+
+# x86-64(x64)
+
+SYSV Calling Convention
+
+```c
+// Name: sysv.c
+// Compile: gcc -fno-asynchronous-unwind-tables  -masm=intel \
+//         -fno-omit-frame-pointer -S sysv.c -fno-pic -O0
+
+#define ull unsigned long long
+
+ull callee(ull a1, int a2, int a3, int a4, int a5, int a6, int a7) {
+  ull ret = a1 + a2 + a3 + a4 + a5 + a6 + a7;
+  return ret;
+}
+
+void caller() { callee(123456789123456789, 2, 3, 4, 5, 6, 7); }
+
+int main() { caller(); }
+```
+
+위와 같은 코드를 컴파일 후 디버거를 붙여보면
+
+```disassembly
+|──────────────────────[ DISASM / x86-64 / set emulate on]──────────────────────|
+||► 0x555555555185 <caller> endbr64|
+||0x555555555189 <caller+4> push rbp|
+||0x55555555518a <caller+5> mov rbp, rsp|
+||0x55555555518d <caller+8> push 7|
+||0x55555555518f <caller+10> mov r9d, 6|
+||0x555555555195 <caller+16> mov r8d, 5|
+||0x55555555519b <caller+22> mov ecx, 4|
+||0x5555555551a0 <caller+27> mov edx, 3|
+||0x5555555551a5 <caller+32> mov esi, 2|
+||0x5555555551aa <caller+37> movabs rax, 0x1b69b4bacd05f15|
+||0x5555555551b4 <caller+47> mov rdi, rax|
+||0x5555555551b7 <caller+50> call 0x555555555129 <callee>|
+||0x5555555551bc <caller+55> add rsp,0x8|
+```
+
+위에 보다시피 10 ~ 37번까진 각 레지스터로 인자값을 넣는것을 볼 수 있다.
+8번부터는 레지스터가 아닌 스택에 인자를 저장하는 것을 볼 수 있다.
+
+이제 callee 함수 호출 직전으로 가보면,
+
+```disassembly
+|─────────────[ REGISTERS / show-flags off / show-compact-regs off]─────────────|
+||RAX 0x1b69b4bacd05f15|
+||RBX 0x0|
+||RCX 0x4|
+||RDX 0x3|
+||RDI 0x1b69b4bacd05f15|
+||RSI 0x2|
+||R8 0x5|
+||R9 0x6|
+||R10 0x7ffff7fc3908 ◂— 0xd00120000000e|
+||R11 0x7ffff7fde680 (_dl_audit_preinit) ◂— endbr64|
+||...|
+|||
+||pwndbg> x/4gx $rsp|
+||0x7fffffffe2f8: 0x0000000000000007 0x00007fffffffe310|
+||0x7fffffffe308: 0x00005555555551d5 0x0000000000000001|
+```
+
+인자들이 _rdi, rsi, rdx, rcx, r8, r9_ 그리고 rsp(스택)에 저장되어 있는것을 알 수 있다.
+이게 바로 인자가 들어가는 순서다.
+
+이번엔 call 이 실행된 뒤를 보겠다.
+
+```disassembly
+pwndbg> si
+0x00005555555545fa in callee ()
+...
+pwndbg> x/4gx $rsp
+0x7fffffffdf70:	0x0000555555554682	0x0000000000000007
+0x7fffffffdf80:	0x00007fffffffdf90	0x0000555555554697
+pwndbg> x/10i 0x0000555555554682 - 5
+   0x55555555467d <caller+43>:	call   0x5555555545fa <callee>
+   0x555555554682 <caller+48>:	add    rsp,0x8
+```
+
+보면 rsp에 0x0000555555554682가 저장되어 있다. 저 값이 바로 call 다음 주소이다.
+call이 끝나면 기존 실행 흐름으로 돌아오기 위해 스택에 주소를 저장하게 된다.
+
+이번엔 callee 함수의 프롤로그를 보겠다.
+
+```disassembly
+pwndbg> x/9i $rip
+=> 0x555555555129 <callee>:	endbr64
+   0x55555555512d <callee+4>:	push   rbp
+   0x55555555512e <callee+5>:	mov    rbp,rsp
+   0x555555555131 <callee+8>:	mov    QWORD PTR [rbp-0x18],rdi
+   0x555555555135 <callee+12>:	mov    DWORD PTR [rbp-0x1c],esi
+   0x555555555138 <callee+15>:	mov    DWORD PTR [rbp-0x20],edx
+   0x55555555513b <callee+18>:	mov    DWORD PTR [rbp-0x24],ecx
+   0x55555555513e <callee+21>:	mov    DWORD PTR [rbp-0x28],r8d
+   0x555555555142 <callee+25>:	mov    DWORD PTR [rbp-0x2c],r9d
+pwndbg> si
+pwndbg> si
+0x000055555555512e in callee ()
+──────────────────────[ DISASM / x86-64 / set emulate on ]──────────────────────
+   0x555555555129 <callee>       endbr64
+   0x55555555512d <callee+4>     push   rbp
+ ► 0x55555555512e <callee+5>     mov    rbp, rsp
+   0x555555555131 <callee+8>     mov    qword ptr [rbp - 0x18], rdi
+...
+pwndbg> x/4gx $rsp
+0x7fffffffe2e8: 0x00007fffffffe300  0x00005555555551bc
+0x7fffffffe2f8: 0x0000000000000007  0x00007fffffffe310
+pwndbg> print $rbp
+$1 = (void ) 0x7fffffffe300
+```
+
+4번을 보면 `push rbp`를 하는데 이걸 SFP 라고 부른다.
+나중에 callee 함수에서 return 될 때, pop 해서 스택프레임으로 돌아갈 때 사용한다.
+
+이번엔 에필로그를 보자.
+
+```disassembly
+pwndbg> b callee+79
+Breakpoint 3 at 0x555555555178
+pwndbg> c
+...
+──────────────────────[ DISASM / x86-64 / set emulate on ]──────────────────────
+ ► 0x555555555178 <callee+79>    add    rax, rdx
+   0x55555555517b <callee+82>    mov    qword ptr [rbp - 8], rax
+   0x55555555517f <callee+86>    mov    rax, qword ptr [rbp - 8]
+   0x555555555183 <callee+90>    pop    rbp
+   0x555555555184 <callee+91>    ret
+
+pwndbg> b callee+91
+Breakpoint 4 at 0x555555555184
+pwndbg> c
+...
+──────────────────────[ DISASM / x86-64 / set emulate on ]──────────────────────
+   0x555555555178 <callee+79>    add    rax, rdx
+   0x55555555517b <callee+82>    mov    qword ptr [rbp - 8], rax
+   0x55555555517f <callee+86>    mov    rax, qword ptr [rbp - 8]
+   0x555555555183 <callee+90>    pop    rbp
+ ► 0x555555555184 <callee+91>    ret                                  <0x5555555551bc; caller+55>
+    ↓
+...
+
+pwndbg> print $rax
+$1 = 123456789123456816
+```
+
+```disassembly
+pwndbg> d
+pwndbg> b callee+90
+Breakpoint 1 at 0x1183
+pwndbg> r
+...
+──────────────────────[ DISASM / x86-64 / set emulate on ]──────────────────────
+ ► 0x555555555183 <callee+90>                     pop    rbp
+   0x555555555184 <callee+91>                     ret
+    ↓
+...
+
+pwndbg> si
+pwndbg> si
+...
+──────────────────────[ DISASM / x86-64 / set emulate on ]──────────────────────
+   0x555555555183 <callee+90>                     pop    rbp
+   0x555555555184 <callee+91>                     ret
+    ↓
+ ► 0x5555555551bc <caller+55>                     add    rsp, 8
+   0x5555555551c0 <caller+59>                     nop
+   0x5555555551c1 <caller+60>                     leave
+   0x5555555551c2 <caller+61>                     ret
+    ↓
+...
+pwndbg> print $rbp
+$1 = (void ) 0x7fffffffe300
+pwndbg> print $rip
+$2 = (void ()()) 0x5555555551bc <caller+55>
+```
+
+반환값을 rax에 옮기고, 최종적으로 스택프레임으로 가서 return address 로 반환값을 가지고 return 한다.
+여기서 callee 함수에선 스택프레임을 만들지 않아서 `pop rbp`를 했지만, 대부분 leave로 처리한다.
+
+# x86
+
+- cdecl Calling Convention
+
+```c
+// Name: cdecl.c
+// Compile: gcc -fno-asynchronous-unwind-tables -nostdlib -masm=intel \
+//          -fomit-frame-pointer -S cdecl.c -w -m32 -fno-pic -O0
+
+void __attribute__((cdecl)) callee(int a1, int a2){ // cdecl로 호출
+}
+
+void caller(){
+   callee(1, 2);
+}
+```
+
+예시 코드인데, 일단 cdecl은 레지스터가 아닌 스택에 인자 값을 저장함.
+위에 callee 함수를 호출하면서 1, 2를 인자 값을 줌.
+스택을 통해 인자 값을 줄 땐, 마지막 인자부터 첫 번째 인자까지 거꾸로 스택에 push 함.
+```disassembly
+push 2 # 2번째 인자 값
+push 1 # 1번째 인자 값
+call callee # 함수 호출
+add esp, 8 # 스택 정리
+nop
+ret
+```
+
+---
